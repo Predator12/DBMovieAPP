@@ -1,0 +1,3 @@
+from controllers.actors_controller import ActorController
+from controllers.directors_conroller import DirectorController
+from controllers.movies_controller import MovieController
