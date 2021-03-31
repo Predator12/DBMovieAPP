@@ -10,17 +10,20 @@ class MoviesTableWidget(QTableWidget):
         self.w = None
         self.movies = []
         self.movie_keys = []
+        self.row_index = 0
 
     def load_content_from_db(self, movies=None):
         if movies:
             self.movies = movies
+        self.row_index = len(self.movies)
         self.movie_keys = MovieController.get_keys()
         self.movie_keys.append("Rate")
         self.setEditTriggers(QTableWidget.NoEditTriggers)
         self.setColumnCount(len(self.movie_keys))
-        self.setRowCount(len(self.movies))
+        self.setRowCount(self.row_index)
         self.setHorizontalHeaderLabels(self.movie_keys)
         header = self.horizontalHeader()
+
 
         for row_index, movie in enumerate(self.movies):
             dict_movie = movie.to_dict()
@@ -41,6 +44,32 @@ class MoviesTableWidget(QTableWidget):
                         QTableWidgetItem(str(dict_movie[item]))
                     )
             self.setItem(row_index, 5, QTableWidgetItem(str("")))
+
+    def update_table_content(self,  movies=None):
+        if movies:
+            self.movies = movies
+        header = self.horizontalHeader()
+        self.setRowCount(self.row_index+len(self.movies))
+        for row_index, movie in enumerate(self.movies):
+            dict_movie = movie.to_dict()
+            for col_index, item in enumerate(dict_movie):
+                header.setSectionResizeMode(col_index, QHeaderView.Stretch)
+                if item == "actors":
+                    btn_actor = QPushButton('Actors')
+                    self.setCellWidget(self.row_index, col_index, btn_actor)
+                    btn_actor.clicked.connect(self.show_actors_window)
+                elif item == "directors":
+                    btn_directors = QPushButton('Directors')
+                    self.setCellWidget(self.row_index, col_index, btn_directors)
+                    btn_directors.clicked.connect(self.show_directors_window)
+                else:
+                    self.setItem(
+                        self.row_index,
+                        col_index,
+                        QTableWidgetItem(str(dict_movie[item]))
+                    )
+            self.setItem(self.row_index, 5, QTableWidgetItem(str("")))
+            self.row_index += 1
 
     def show_actors_window(self):
         button = qApp.focusWidget()

@@ -1,16 +1,25 @@
 from PyQt5 import QtWidgets, QtCore
 from view import main_window
 from utility import get_movie_rating
+from utility import get_session
+from controllers import MovieController
 
 
 class MainWindowInit(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
     def __init__(self):
         super(MainWindowInit, self).__init__()
+        self.limit_count = 20
+        self.movies_controller = MovieController(get_session())
+        self.movies = self.movies_controller.get_by_limit(0, self.limit_count)
         self.is_get_all = False
         self.constant_limit = 10
         self.len_of_headers = len(self.movies_controller.get_keys())
 
     def addSignal(self):
+        self.tableWidget.load_content_from_db(self.movies)
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.resizeRowsToContents()
+
         self.pushButton.clicked.connect(self.load_all_data_in_table)
         self.pushButton_8.clicked.connect(self.load_more_date_from_constant)
         self.pushButton_7.clicked.connect(self.load_more_date_from_input)
@@ -18,7 +27,7 @@ class MainWindowInit(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
         self.set_combo_box_items(self.comboBox_2)
         self.pushButton_6.clicked.connect(self.load_data_by_order_column)
         self.pushButton_5.clicked.connect(self.load_data_by_search)
-        self.checkrate = CheckRate(self.movies)
+        self.checkrate = CheckRate(self.movies, self.tableWidget, self.len_of_headers)
         self.checkrate.new_signal.connect(self.set_data_rate)
         self.checkrate.start()
 
@@ -29,16 +38,16 @@ class MainWindowInit(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
 
     def load_all_data_in_table(self):
         self.is_get_all = True
-        self.movies = self.movies_controller.get_all()
-        self.tableWidget.load_content_from_db(self.movies)
+        self.movies = self.movies_controller.get_all(self.limit_count)
+        self.tableWidget.update_table_content(self.movies)
         self.checkrate.terminate()
         self.checkrate.set_movies(self.movies)
         self.checkrate.start()
 
     def load_more_date_from_constant(self):
+        self.movies = self.movies_controller.get_by_limit(self.limit_count, self.constant_limit)
         self.limit_count += self.constant_limit
-        self.movies = self.movies_controller.get_by_limit(self.limit_count)
-        self.tableWidget.load_content_from_db(self.movies)
+        self.tableWidget.update_table_content(self.movies)
         self.checkrate.terminate()
         self.checkrate.set_movies(self.movies)
         self.checkrate.start()
@@ -46,9 +55,9 @@ class MainWindowInit(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
     def load_more_date_from_input(self):
         limit_count_from_line = self.lineEdit.text()
         if limit_count_from_line:
+            self.movies = self.movies_controller.get_by_limit(self.limit_count,  int(limit_count_from_line))
             self.limit_count += int(limit_count_from_line)
-            self.movies = self.movies_controller.get_by_limit(self.limit_count)
-            self.tableWidget.load_content_from_db(self.movies)
+            self.tableWidget.update_table_content(self.movies)
             self.checkrate.terminate()
             self.checkrate.set_movies(self.movies)
             self.checkrate.start()
@@ -98,19 +107,22 @@ class MainWindowInit(QtWidgets.QMainWindow, main_window.Ui_MainWindow):
 class CheckRate(QtCore.QThread):
     new_signal = QtCore.pyqtSignal(int, str)
 
-    def __init__(self, movies=[], parent=None):
+    def __init__(self, movies=[], tableWidget=QtWidgets.QTableWidget, len_of_headers=0, parent=None):
         QtCore.QThread.__init__(self, parent)
         self.movies = movies
+        self.tableWidget = tableWidget
+        self.len_of_headers = len_of_headers
 
     def run(self):
         list_len = len(self.movies)
         index = 0
         while index < list_len:
             movie = self.movies[index]
-            rating = get_movie_rating(movie.name, movie.creation_date)
-            self.new_signal.emit(index, rating)
+            if not self.tableWidget.item(index, self.len_of_headers).text():
+                rating = get_movie_rating(movie.name, movie.creation_date)
+                self.new_signal.emit(index, rating)
             index += 1
 
     def set_movies(self, movies):
         self.is_stopped = False
-        self.movies = movies
+        self.movies.extend(movies)

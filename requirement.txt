@@ -2,3 +2,4 @@ pyqt5
 sqlalchemy
 requests
 urllib3
+cowsay

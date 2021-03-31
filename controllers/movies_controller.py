@@ -7,11 +7,11 @@ class MovieController:
     def __init__(self, session=None):
         self.session = session
 
-    def get_all(self):
-        return self.session.query(Movie).all()
+    def get_all(self, limit_count):
+        return self.session.query(Movie).offset(limit_count).all()
 
-    def get_by_limit(self, limit):
-        return self.session.query(Movie).limit(limit).all()
+    def get_by_limit(self, limit, count):
+        return self.session.query(Movie).offset(limit).limit(count).all()
 
     def get_by_order(self, column_name, limit, order):
         column_name = column_name.lower().replace(" ", "_")
